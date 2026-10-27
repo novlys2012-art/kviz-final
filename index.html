@@ -256,6 +256,19 @@ body.es-keys-on main{padding-bottom:96px}
 .es-tr{display:block;font-size:14.5px;line-height:1.45;color:var(--muted);font-style:italic;margin-top:2px}
 .es-pop{position:absolute;z-index:30;max-width:min(300px,calc(100vw - 24px));background:var(--es-pop-bg);color:var(--ink);border:1px solid var(--es-pop-line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px 14px;display:grid;gap:2px;font-size:15px;line-height:1.4}
 body{--es-hl:var(--ledger-soft);--es-pop-bg:var(--sheet);--es-pop-line:var(--rule)}
+/* Gramatika slovesa v bubline */
+.es-vg{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--es-pop-line);font-size:14px}
+.es-vg-tag{justify-self:start;font:600 11.5px var(--f-body);letter-spacing:.05em;text-transform:uppercase;color:var(--ledger);background:var(--ledger-soft);border-radius:999px;padding:2px 9px}
+.es-vg p{margin:0}
+.es-vg-l b{color:var(--ledger)}
+.es-vg-r{color:var(--muted)}
+.es-vg details summary{cursor:pointer;font-weight:600;color:var(--ledger)}
+.es-vg table{border-collapse:collapse;margin-top:4px;font-size:14px}
+.es-vg td{padding:2px 12px 2px 0;border-bottom:1px solid var(--es-pop-line);white-space:nowrap}
+.es-vg td:first-child{color:var(--muted)}
+.es-vg td.ch{font-weight:700}
+.es-vg tr.me td{background:var(--es-hl)}
+.es-w.v{text-decoration-style:dashed}
 /* ===== Režimy precvičovania (m-) */
 .m-head{display:grid;gap:4px;margin-bottom:16px}
 .m-head h2{font:700 clamp(24px,5vw,30px)/1.15 var(--es-display);margin:0;text-wrap:balance}
@@ -1824,12 +1837,12 @@ function esGlossFrag(text){
       let ok=true;for(let j=k;j<k+n-1;j++)if(text.slice(words[j].e,words[j+1].s)!==" "){ok=false;break}
       if(!ok)continue;
       key=words.slice(k,k+n).map(x=>x.w).join(" ");
-      if(ES_GKEYS.has(key)){hit=n;break}
+      if(ES_GKEYS.has(key)||n<=2&&ESC_FORM.has(key)){hit=n;break}
     }
     if(!hit){k++;continue}
     const s=words[k].s,e=words[k+hit-1].e;
     if(s>pos)frag.append(text.slice(pos,s));
-    const sp=document.createElement("span");sp.className="es-w";sp.tabIndex=0;sp.setAttribute("role","button");sp.dataset.g=key;sp.textContent=text.slice(s,e);
+    const sp=document.createElement("span");sp.className="es-w";sp.tabIndex=0;sp.setAttribute("role","button");sp.dataset.g=key;sp.textContent=text.slice(s,e);if(escLookup(key))sp.classList.add("v");
     frag.append(sp);pos=e;k+=hit;
   }
   if(pos<text.length)frag.append(text.slice(pos));
@@ -1837,19 +1850,35 @@ function esGlossFrag(text){
 }
 function esGlossTree(root){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];while(w.nextNode())nodes.push(w.currentNode);nodes.forEach(n=>n.replaceWith(esGlossFrag(n.nodeValue)))}
 const esPop=document.createElement("div");esPop.className="es-pop";esPop.hidden=true;esPop.setAttribute("role","status");document.body.append(esPop);
-let esPopFor=null;
-function esPopClose(){esPop.hidden=true;esPopFor=null}
-function esPopOpen(sp){
-  if(esPopFor===sp){esPopClose();return}
-  esPopFor=sp;esPop.textContent="";
-  const b=document.createElement("b");b.textContent=sp.textContent;
-  const t=document.createElement("span");t.textContent=ES_GKEYS.get(sp.dataset.g);
-  esPop.append(b,t);esPop.hidden=false;
-  const r=sp.getBoundingClientRect(),vw=document.documentElement.clientWidth,pw=esPop.offsetWidth;
+let esPopFor=null,esPopPinned=false,esHoverT=0;
+const esHover=matchMedia("(hover:hover) and (pointer:fine)");
+function esPopClose(){esPop.hidden=true;esPopFor=null;esPopPinned=false}
+function esPopPlace(){
+  const sp=esPopFor;if(!sp)return;
+  const r=sp.getBoundingClientRect(),vw=document.documentElement.clientWidth,vh=document.documentElement.clientHeight,pw=esPop.offsetWidth,ph=esPop.offsetHeight;
   esPop.style.left=(window.scrollX+Math.max(12,Math.min(r.left,vw-pw-12)))+"px";
-  esPop.style.top=(window.scrollY+r.bottom+6)+"px";
+  const above=r.bottom+6+ph>vh-8&&r.top-6-ph>8;
+  esPop.style.top=(window.scrollY+(above?r.top-6-ph:r.bottom+6))+"px";
 }
+// pin=true: otvorené kliknutím (ostane), false: iba pri prejdení myšou
+function esPopOpen(sp,pin=true){
+  if(esPopFor===sp){if(pin&&esPopPinned)esPopClose();else esPopPinned=esPopPinned||pin;return}
+  esPopFor=sp;esPopPinned=pin;esPop.textContent="";
+  const b=document.createElement("b");b.textContent=sp.textContent;
+  esPop.append(b);
+  const tr=ES_GKEYS.get(sp.dataset.g)||ES_GKEYS.get(sp.dataset.g.split(" ").pop());
+  if(tr){const t=document.createElement("span");t.textContent=tr;esPop.append(t)}
+  const g=escGrammar(sp.dataset.g);if(g)esPop.append(g);
+  esPop.hidden=false;esPopPlace();
+}
+esPop.addEventListener("toggle",esPopPlace,true);
 document.addEventListener("click",e=>{const sp=e.target.closest&&e.target.closest(".es-w");if(sp){esPopOpen(sp);return}if(!esPop.contains(e.target))esPopClose()});
+document.addEventListener("mouseover",e=>{
+  if(!esHover.matches)return;
+  const sp=e.target.closest&&e.target.closest(".es-w");
+  if(sp||esPop.contains(e.target)){clearTimeout(esHoverT);if(sp&&sp!==esPopFor&&!esPopPinned)esHoverT=setTimeout(()=>esPopOpen(sp,false),180);return}
+  if(!esPop.hidden&&!esPopPinned){clearTimeout(esHoverT);esHoverT=setTimeout(()=>{if(!esPopPinned)esPopClose()},200)}
+});
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape")esPopClose();
   else if((e.key==="Enter"||e.key===" ")&&document.activeElement&&document.activeElement.classList.contains("es-w")){e.preventDefault();esPopOpen(document.activeElement)}
@@ -2141,6 +2170,12 @@ const ESC_V=[
  ["tener","mať","irr",["tengo","tienes","tiene","tenemos","tenéis","tienen"]],["salir","vyjsť, odísť","irr",["salgo","sales","sale","salimos","salís","salen"]],
  ["llamarse","volať sa","refl"],["levantarse","vstať","refl"],["ducharse","sprchovať sa","refl"],["lavarse","umývať sa","refl"],["peinarse","česať sa","refl"],["bañarse","kúpať sa","refl"],["afeitarse","holiť sa","refl"],
  ["acostarse","ísť spať","refl","ue"],["despertarse","zobudiť sa","refl","ie"],["vestirse","obliecť sa","refl","i"],["sentarse","sadnúť si","refl","ie"],["irse","odísť","refl",["voy","vas","va","vamos","vais","van"]],
+ ["cenar","večerať","reg"],["cocinar","variť","reg"],["llegar","prísť, doraziť","reg"],["saludar","pozdraviť","reg"],["tomar","vziať; dať si","reg"],["nadar","plávať","reg"],["pasear","prechádzať sa","reg"],["madrugar","vstávať skoro","reg"],
+ ["comenzar","začať","bota","ie"],["sentir","cítiť, ľutovať","bota","ie"],["seguir","sledovať, pokračovať","bota",["sigo","sigues","sigue","seguimos","seguís","siguen"]],["medir","merať","bota","i"],
+ ["almorzar","obedovať","bota","ue"],["mover","hýbať","bota","ue"],["morir","umrieť","bota","ue"],["soler","zvyknúť (niečo robiť)","bota","ue"],
+ ["ir","ísť","irr",["voy","vas","va","vamos","vais","van"]],["hacer","robiť","irr",["hago","haces","hace","hacemos","hacéis","hacen"]],["venir","prísť","irr",["vengo","vienes","viene","venimos","venís","vienen"]],["ver","vidieť","irr",["veo","ves","ve","vemos","veis","ven"]],
+ ["enfadarse","hnevať sa","refl"],["maquillarse","líčiť sa","refl"],["arreglarse","upraviť sa","refl"],["secarse","vysušiť sa","refl"],["quitarse","dať si dole, vyzliecť si","refl"],
+ ["dormirse","zaspať","refl","ue"],["moverse","hýbať sa","refl","ue"],["ponerse","obliecť si","refl",["pongo","pones","pone","ponemos","ponéis","ponen"]],
 ];
 function escForms(v){
   const [inf,,type,x]=v;
@@ -2155,6 +2190,78 @@ function escForms(v){
   }
   if(type==="refl"){const pr=["me","te","se","nos","os","se"];forms=forms.map((f,k)=>pr[k]+" "+f)}
   return forms;
+}
+// Gramatika do bubliny pri slove: tvar slovesa → [{v, p}] (p = osoba 0–5, -1 neurčitok)
+const ESC_NOTE={
+ ser:"Veľmi nepravidelné, tvary sa učíš naspamäť. Národnosť, povolanie a povaha: Soy médico.",
+ estar:"Nepravidelné. Poloha a pocity: Estoy en casa. Estoy cansado.",
+ tener:"Sloveso bota (e → ie: tienes, tiene, tienen) a zároveň „sombrero“: nepravidelné yo – tengo. Vlastníctvo a vek: Tengo 20 años.",
+ salir:"Nepravidelné iba v yo (salgo), ostatné tvary sú pravidelné.",
+ hacer:"Nepravidelné iba v yo (hago), ostatné tvary sú pravidelné.",
+ venir:"Ako tener: yo vengo a bota e → ie (vienes, viene, vienen).",
+ ver:"Takmer pravidelné: yo veo, vosotros veis.",
+ ir:"Úplne nepravidelné, tvary sa učíš naspamäť. Ir a + miesto: Voy a clase.",
+ seguir:"Zmena e → i. V yo sa navyše gu mení na g: sigo.",
+ irse:"Tvary ako ir (voy, vas…), so zvratným zámenom: me voy, te vas.",
+ ponerse:"Nepravidelné v yo: me pongo, ostatné tvary sú pravidelné.",
+ jugar:"Jediné sloveso u → ue.",
+};
+const ESC_END={ar:"-o, -as, -a, -amos, -áis, -an",er:"-o, -es, -e, -emos, -éis, -en",ir:"-o, -es, -e, -imos, -ís, -en"};
+// Slová, ktoré sú častejšie podstatné meno alebo iné slovo než tvar slovesa
+const ESC_AMBIG=new Set(["como","desayuno","baño","ducha","cena","juego","vuelo","seco","quito","llama","paseo","nada","toma"]);
+const ESC_FORM=new Map();
+function escAddForm(f,v,p){f=f.toLowerCase();if(!ESC_FORM.has(f))ESC_FORM.set(f,[]);const l=ESC_FORM.get(f);if(!l.some(x=>x.v===v&&x.p===p))l.push({v,p})}
+ESC_V.forEach(v=>{
+  const refl=v[2]==="refl",base=refl?v[0].slice(0,-2):v[0],bare=refl&&!ESC_V.some(w=>w[0]===base);
+  escAddForm(v[0],v,-1);
+  if(refl)["me","te","nos","os"].forEach(pr=>escAddForm(base+pr,v,-1));
+  escForms(v).forEach((f,p)=>{escAddForm(f,v,p);if(bare)escAddForm(f.split(" ").pop(),v,p)});
+});
+// Nájde sloveso vo fráze z bubliny (berie posledné slovo, ktoré je tvarom slovesa)
+function escLookup(key){
+  const ws=key.toLowerCase().split(" ");
+  if(ESC_FORM.has(ws.join(" ")))return {k:ws.join(" "),l:ESC_FORM.get(ws.join(" "))};
+  for(let i=ws.length-1;i>=0;i--)if(ESC_FORM.has(ws[i]))return {k:ws[i],l:ESC_FORM.get(ws[i])};
+  return null;
+}
+function escTag(v){
+  const [inf,,g,x]=v,ch=typeof x==="string"?(x==="ue"&&inf.startsWith("jug")?"u → ue":(x==="ue"?"o":"e")+" → "+x):"";
+  if(g==="reg")return "Pravidelné -"+inf.slice(-2);
+  if(g==="bota")return "Sloveso bota"+(ch?" · "+ch:"");
+  if(g==="refl")return "Zvratné"+(ch?" · bota "+ch:"");
+  return "Nepravidelné";
+}
+function escRule(v){
+  const [inf,,g,x]=v,base=g==="refl"?inf.slice(0,-2):inf,end=base.slice(-2),out=[];
+  if(g==="reg")out.push("Odtrhni -"+end+" a pridaj koncovky "+ESC_END[end]+".");
+  if(g==="bota"||(g==="refl"&&typeof x==="string"))out.push("Kmeň sa mení v tvaroch yo, tú, él, ellos (tvar topánky). Nosotros a vosotros sa nemenia, koncovky sú pravidelné.");
+  if(g==="refl")out.push("Zámeno me, te, se, nos, os, se stojí pred slovesom a časuje sa (ako slovenské „sa“). Po inom slovese sa pripája na koniec: quiero "+base+"me.");
+  if(ESC_NOTE[inf])out.push(ESC_NOTE[inf]);
+  return out.join(" ");
+}
+function escGrammar(key){
+  const hit=escLookup(key);if(!hit)return null;
+  const box=document.createElement("div");box.className="es-vg";
+  hit.l.forEach(({v,p},n)=>{
+    if(n>2)return;
+    const forms=escForms(v),boot=v[2]==="bota"||v[2]==="refl"&&typeof v[3]==="string"||["tener","venir"].includes(v[0]);
+    const tag=document.createElement("span");tag.className="es-vg-tag";tag.textContent=escTag(v);
+    const l=document.createElement("p");l.className="es-vg-l";
+    const inf=document.createElement("b");inf.textContent=v[0];
+    l.append(ESC_AMBIG.has(hit.k)?"Ak je to sloveso: ":"",inf," – "+v[1]+" · "+(p<0?"neurčitok":ESC_P[p]+" ("+ESC_PSK[p]+")"));
+    const r=document.createElement("p");r.className="es-vg-r";r.textContent=escRule(v);
+    const d=document.createElement("details"),sm=document.createElement("summary"),tb=document.createElement("table");
+    sm.textContent="Časovanie v prítomnom čase";
+    forms.forEach((f,k)=>{
+      const tr=tb.insertRow(),a=tr.insertCell(),b=tr.insertCell();
+      a.textContent=["yo","tú","él / ella","nosotros","vosotros","ellos / ellas"][k];b.textContent=f;
+      if(boot&&(k<3||k===5))b.className="ch";
+      if(k===p)tr.className="me";
+    });
+    d.append(sm,tb);
+    box.append(tag,l,r,d);
+  });
+  return box;
 }
 function esmConj(body,sel){
   esmStop();body.innerHTML="";

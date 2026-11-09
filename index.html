@@ -314,6 +314,28 @@ select.m-blank{border:1px solid var(--es-line);border-bottom:2px solid var(--mut
 .m-fb{font-size:14px;font-weight:600;margin-left:4px}
 .m-fb.ok{color:var(--es-ok)}.m-fb.warn{color:var(--es-warn)}.m-fb.bad{color:var(--es-bad)}
 .m-fb.big{font-size:17px;margin:0;min-height:1.5em}
+/* Skúška nanečisto */
+.m-plan{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.m-plan li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:baseline;font-size:15px}
+.m-exam{gap:22px}
+.m-ex-h{margin:0;font:700 clamp(20px,4vw,24px)/1.2 var(--es-display)}
+.m-act{display:grid;gap:10px;border-top:1px solid var(--es-line);padding-top:16px;min-width:0}
+.m-act h3{margin:0;font:700 17px/1.35 var(--es-body)}
+.m-act .m-act-t{font-weight:600}
+.m-act .m-ins{margin:0}
+.m-pts{font:600 14px var(--es-mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+.m-bank{display:flex;flex-wrap:wrap;gap:8px}
+.m-bank span{border:1px solid var(--es-line);border-radius:8px;padding:5px 12px;font-weight:600;background:var(--es-bg)}
+.m-text{border-left:3px solid var(--es-acc);background:var(--es-bg);border-radius:0 8px 8px 0;padding:6px 14px;font-size:15.5px}
+.m-text p{margin:5px 0}
+.m-ex{margin:0;color:var(--muted);font-size:15px}
+.m-ex u{color:var(--ink);text-decoration-color:var(--es-acc);text-underline-offset:3px}
+.m-abcl{list-style:lower-alpha}
+.m-num .m-line{line-height:1.5}
+.m-abc{display:flex;flex-direction:column;align-items:flex-start;margin:8px 0 0}
+.m-abc button{text-align:left;border-radius:10px}
+.m-abc.missing{border-radius:10px}
+.m-rut b{font-family:var(--es-mono);font-weight:600}
 .m-hist{list-style:none;margin:0;padding:0;display:grid}
 .m-hist li{display:grid;grid-template-columns:1fr auto auto auto;gap:14px;padding:8px 0;border-top:1px solid var(--es-line);font-variant-numeric:tabular-nums;font-size:15px}
 .m-hist li:first-child{border-top:0}
@@ -1877,14 +1899,15 @@ casa:{n:"Vivienda y oficina",sk:"Bývanie a kancelária",c:[["el piso","byt"],["
 horarios:{n:"Horarios y trabajo",sk:"Čas, práca a stretnutia",c:[["¿qué hora es?","koľko je hodín?"],["¿a qué hora?","o koľkej?"],["¿desde qué hora?","od koľkej?"],["¿hasta qué hora?","do koľkej?"],["en punto","presne (celá hodina)"],["y cuarto","a štvrť"],["y media","a pol"],["menos cuarto","tri štvrte na…"],["temprano / pronto","skoro"],["entre semana","cez týždeň"],["el fin de semana","víkend"],["la jornada laboral","pracovný čas"],["trabajar desde casa","pracovať z domu"],["la empresa","firma"],["los compañeros","kolegovia"],["la reunión","porada, stretnutie"],["estar libre","mať voľno, mať čas"],["quedar","dohodnúť si stretnutie"],["el informe","správa (dokument)"],["el cliente","klient"],["echar de menos","chýbať (niekto mi chýba)"],["dentro de tres días","o tri dni"],["el vuelo","let"],["soler + infinitivo","zvyknúť (niečo robiť)"],["acostumbrarse","zvyknúť si"]]}
 };
 // ===== Španielčina: režimy precvičovania (moje chyby, kartičky, test, časovanie)
-const ESM_K={miss:"cuaderno-es:chyby",cards:"cuaderno-es:karticky",tests:"cuaderno-es:testy",conj:"cuaderno-es:casovanie"};
+const ESM_K={exams:"cuaderno-es:skusky",miss:"cuaderno-es:chyby",cards:"cuaderno-es:karticky",tests:"cuaderno-es:testy",conj:"cuaderno-es:casovanie"};
 const ESM_MODES={
   chyby:{t:"Moje chyby",sk:"Vety, v ktorých si urobil chybu. Keď ich vyriešiš správne, zo zoznamu zmiznú."},
   karticky:{t:"Kartičky so slovíčkami",sk:"Slovíčka z hodín. Spomeň si, otoč kartičku a označ, či si vedel."},
+  skuska:{t:"Skúška nanečisto",sk:"Náhodný test vo formáte vzorovej skúšky Examen parcial: 6 aktivít, 4 body."},
   test:{t:"Test naprieč témami",sk:"Náhodné úlohy zo všetkých tém, s časomierou a skóre."},
   casovanie:{t:"Časovanie slovies",sk:"Rýchlo napíš správny tvar slovesa pre danú osobu."}
 };
-const ESM_TYPING=new Set(["chyby","test","casovanie"]);
+const ESM_TYPING=new Set(["chyby","test","casovanie","skuska"]);
 let esmTimer=null;
 function esmStop(){if(esmTimer){clearInterval(esmTimer);esmTimer=null}}
 function esmGet(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
@@ -2013,11 +2036,12 @@ function esmRender(box,mode,back){
   head.append(esmEl("h2",{},ESM_MODES[mode].t),esmEl("p",{class:"m-sub"},ESM_MODES[mode].sk));
   const body=esmEl("div",{class:"m-body"});
   box.append(head,body);
-  ({chyby:esmMistakes,karticky:esmCards,test:esmExam,casovanie:esmConj})[mode](body);
+  ({chyby:esmMistakes,karticky:esmCards,test:esmExam,casovanie:esmConj,skuska:esxExam})[mode](body);
 }
 function esmModeCount(mode){
   if(mode==="chyby"){const n=esMissList().length;return n?n+" na zopakovanie":"zatiaľ žiadne"}
   if(mode==="karticky"){const st=esmGet(ESM_K.cards,{}),tot=Object.values(ES_CARDS).reduce((s,d)=>s+d.c.length,0);return Object.values(st).filter(v=>v===1).length+" / "+tot}
+  if(mode==="skuska"){const h=esmGet(ESM_K.exams,[]);return h.length?"naposledy "+esmPts(h[0].p)+" / 4":"6 aktivít"}
   if(mode==="test"){const h=esmGet(ESM_K.tests,[]);return h.length?"naposledy "+Math.round(h[0].p/h[0].t*100)+" %":"20 úloh"}
   const h=esmGet(ESM_K.conj,[]);return h.length?"naposledy "+esmPts(h[0].ok)+" / "+h[0].n:ESC_V.length+" slovies";
 }
@@ -2124,6 +2148,190 @@ function esmExamRun(body,count){
     const h=esmGet(ESM_K.tests,[]);h.unshift({d:Date.now(),p:r.pts,t:r.tot,s:sec});esmSet(ESM_K.tests,h.slice(0,20));
   });
   body.append(esmEl("div",{class:"m-card"},esmEl("div",{class:"m-bar"},esmEl("span",{class:"m-meta"},count+" úloh zo všetkých tém"),clock),set.el,esmEl("div",{class:"m-foot"},submit,again,score)));
+}
+
+/* ---------- 5. skúška nanečisto: náhodný test vo formáte Examen parcial (Modelo 0) ----------
+   6 aktivít ako na vzorovej skúške, spolu 4 body. Úlohy sa berú z cvičení v ES_TOPICS:
+   1 čísla slovom (5 × 0,1) · 2 privlastňovacie zámená (5 × 0,1) · 3 sloveso z tabuľky v prítomnom čase (5 × 0,15)
+   4 ir a + infinitív z viet s prítomným časom (5 × 0,15) · 5 text a otázky a/b/c (3 × 0,25) · 6 môj deň, 5 rôznych slovies (5 × 0,2) */
+const ESX_IR=["voy","vas","va","vamos","vais","van"],ESX_PR=["me","te","se","nos","os","se"];
+// Vety s jedným políčkom a neurčitkom v zátvorke: „Yo {me levanto} (levantarse) a las siete.“
+function esxVerbItems(){
+  const out=[];
+  ES_TOPICS.forEach(t=>t.ex.forEach((ex,ei)=>{if(ex.kind!=="completar")return;ex.items.forEach((raw,ii)=>{
+    const src=Array.isArray(raw)?raw[0]:raw,m=src.match(/^([^{}]*)\{([^}=]+)\}\s*\(([a-záéíóú]+?(?:se)?)(?:,\s*([^)]+))?\)([^{}]*)$/);
+    if(!m||!/(ar|er|ir)(se)?$/.test(m[3]))return;
+    out.push({key:t.id+"|"+ei+"|"+ii,pre:m[1],ans:m[2].split("|").map(s=>s.trim()),inf:m[3],who:m[4]||"",post:m[5]});
+  })}));
+  return out;
+}
+// osoba (0–5) podľa tvaru slovesa v odpovedi; -1, ak sloveso nepoznáme
+function esxPerson(it){
+  const v=ESC_V.find(x=>x[0]===it.inf)||[it.inf,"",/se$/.test(it.inf)?"refl":"reg"];
+  try{const f=escForms(v).map(esmNorm);return f.indexOf(esmNorm(it.ans[0]))}catch(e){return -1}
+}
+// Slovesá, ktoré uznáme v aktivite 6: tvar „yo“ → neurčitok
+function esxYoForms(){
+  const map=new Map(),add=(f,inf)=>{f=esmBare(f);if(f&&!map.has(f))map.set(f,inf)};
+  ESC_V.forEach(v=>{const f=escForms(v)[0];add(f,v[0]);if(v[2]==="refl")add(f.replace(/^me /,""),v[0].replace(/se$/,""))});
+  ES_CARDS.rutina.c.forEach(([es])=>{const inf=es.split(" ")[0];if(ESC_V.some(v=>v[0]===inf))return;
+    const refl=/se$/.test(inf),base=refl?inf.slice(0,-2):inf;if(!/(ar|er|ir)$/.test(base))return;
+    add((refl?"me ":"")+base.slice(0,-2)+"o",inf)});
+  [["almuerzo","almorzar"],["meriendo","merendar"],["ceno","cenar"],["voy","ir"],["hago","hacer"],["veo","ver"],["pongo","poner"],["me pongo","ponerse"],["me visto","vestirse"],["me despierto","despertarse"],["me acuesto","acostarse"],["me duermo","dormirse"],["vuelvo","volver"],["juego","jugar"],["empiezo","empezar"],["tomo","tomar"],["paseo","pasear"],["corro","correr"],["nado","nadar"],["llego","llegar"],["descanso","descansar"],["compro","comprar"],["miro","mirar"],["veo la tele","ver"],["navego","navegar"],["practico","practicar"],["cocino","cocinar"],["limpio","limpiar"],["trabajo","trabajar"],["estudio","estudiar"],["leo","leer"],["escribo","escribir"],["escucho","escuchar"],["salgo","salir"],["vivo","vivir"]].forEach(([f,i])=>add(f,i));
+  return map;
+}
+function esxLine(src){
+  const line=esmEl("div",{class:"m-line"}),blanks=[],re=/\{([^}]*)\}|\[([^\]]*)\]/g;let last=0,m;
+  while((m=re.exec(src))){
+    if(m.index>last)line.append(src.slice(last,m.index));
+    const fb=esmEl("span",{class:"m-fb"});
+    if(m[1]!=null){
+      const answers=m[1].split("|").map(s=>s.trim()),len=Math.max(...answers.map(a=>a.length));
+      const inp=esmEl("input",{class:"m-blank m-input",type:"text",autocomplete:"off",autocapitalize:"off",spellcheck:"false","aria-label":"odpoveď"});
+      inp.style.width=Math.min(Math.max(len+2,5),34)+"ch";
+      const b={type:"text",el:inp,fb,answers};inp.oninput=()=>esmClear(b);blanks.push(b);line.append(inp,fb);
+    }else{
+      const opts=m[2].split(";").map(s=>s.trim()),wrap=esmEl("span",{class:"m-choice m-abc",role:"group"});
+      const b={type:"choice",el:wrap,fb,right:opts.map(o=>o.startsWith("*")),picked:-1,btns:[]};
+      opts.forEach((o,k)=>{const btn=esmEl("button",{type:"button","aria-pressed":"false"},"abc"[k]+") "+o.replace(/^\*/,""));btn.onclick=()=>{b.picked=k;b.btns.forEach((x,j)=>x.setAttribute("aria-pressed",String(j===k)));esmClear(b)};b.btns.push(btn);wrap.append(btn)});
+      blanks.push(b);line.append(wrap,fb);
+    }
+    last=re.lastIndex;
+  }
+  if(last<src.length)line.append(src.slice(last));
+  return {line,blanks};
+}
+const esxFill=src=>src.replace(/\{([^}|]*)[^}]*\}/g,(_,a)=>"⟨"+a+"⟩");
+function esxExample(src){
+  const p=esmEl("p",{class:"m-ex"},esmEl("b",{},"Ejemplo: "));
+  src.split(/⟨|⟩/).forEach((s,k)=>p.append(k%2?esmEl("u",{},s):s));return p;
+}
+// Zostaví jednu náhodnú skúšku: zoznam aktivít s úlohami v zápise cvičení
+function esxBuild(){
+  const pick=(a,n)=>esmShuffle(a).slice(0,n);
+  const T=id=>ES_TOPICS.find(t=>t.id===id);
+  const refsOf=(tid,eis)=>{const t=T(tid),r=[];eis.forEach(ei=>t.ex[ei].items.forEach((raw,ii)=>r.push({tid,ei,ii,src:Array.isArray(raw)?raw[0]:raw})));return r};
+  const acts=[];
+  // 1 · čísla: dve malé, tri veľké a príklad
+  const small=esmShuffle(refsOf("numeros",[0])),big=pick(refsOf("numeros",[3]),3);
+  acts.push({t:"Actividad 1",pts:.5,sk:"Escribe los siguientes números en español",skk:"Napíš čísla slovom po španielsky.",
+    ex:esxFill(small[0].src),items:[small[1],big[0],small[2],big[1],big[2]].map(r=>({src:r.src,ref:r}))});
+  // 2 · privlastňovacie zámená
+  const pos=esmShuffle(refsOf("posesivos",[0,1]));
+  acts.push({t:"Actividad 2",pts:.5,sk:"Completa con el adjetivo posesivo (mi, mis, tu, tus, etc.) correcto",skk:"Doplň privlastňovacie zámeno podľa osoby v zátvorke.",
+    ex:esxFill(pos[0].src),items:pos.slice(1,6).map(r=>({src:r.src,ref:r}))});
+  // 4 · ir a + infinitív (vyberá sa skôr, aby sa vety neopakovali v aktivite 3)
+  const verbs=esxVerbItems().map(it=>({...it,k:esxPerson(it)})).filter(it=>it.k>=0);
+  const HAB=/siempre|todos los|cada |los (lunes|martes|sábados|domingos|fines)|en (verano|invierno)|soler|casi todo/i;
+  const irPool=esmShuffle(verbs.filter(it=>!HAB.test(it.pre+it.post)&&it.inf!=="soler"));
+  const used=new Set(),irs=[],infs4=new Set();
+  for(const it of irPool){if(irs.length>=6)break;if(infs4.has(it.inf))continue;infs4.add(it.inf);used.add(it.key);irs.push(it)}
+  const irAns=it=>{const r=/se$/.test(it.inf),base=r?it.inf.slice(0,-2):it.inf;
+    return r?[ESX_IR[it.k]+" a "+base+ESX_PR[it.k],ESX_PR[it.k]+" "+ESX_IR[it.k]+" a "+base]:[ESX_IR[it.k]+" a "+it.inf]};
+  const irSrc=it=>it.pre+"{"+irAns(it).join("|")+"} ("+it.inf+(it.who?", "+it.who:"")+")"+it.post;
+  // 3 · sloveso z tabuľky: 6 rôznych slovies, jedno je v príklade
+  const tab=[],infs3=new Set();
+  for(const it of esmShuffle(verbs.filter(it=>!used.has(it.key)))){if(tab.length>=6)break;if(infs3.has(it.inf))continue;infs3.add(it.inf);tab.push(it)}
+  const tabSrc=it=>it.pre+"{"+it.ans.join("|")+"}"+(it.who?" ("+it.who+")":"")+it.post;
+  acts.push({t:"Actividad 3",pts:.75,sk:"Elige el verbo correcto de la tabla y completa en presente",skk:"Vyber sloveso z tabuľky a doplň ho v prítomnom čase. Každé sloveso použi raz.",
+    bank:esmShuffle(tab.map(it=>it.inf)),ex:esxFill(tabSrc(tab[0])),items:tab.slice(1).map(it=>({src:tabSrc(it)}))});
+  acts.push({t:"Actividad 4",pts:.75,sk:"Completa las frases con «ir a + infinitivo»",skk:"Doplň vazbu ir a + neurčitok (budúcnosť: voy a hablar).",
+    ex:esxFill(irSrc(irs[0])),items:irs.slice(1).map(it=>({src:irSrc(it)}))});
+  // 5 · text a tri otázky s možnosťami a, b, c (jedna správna veta a dve nesprávne, alebo naopak)
+  const texts=[];ES_TOPICS.forEach(t=>t.ex.forEach(ex=>{if(ex.kind==="V/F"&&ex.context)texts.push(ex)}));
+  const tx=texts[Math.floor(Math.random()*texts.length)];
+  const st=tx.items.map(raw=>{const s=Array.isArray(raw)?raw[0]:raw;return {s:s.replace(/\s*\[[^\]]*\]\s*$/,""),v:/\[\*V/.test(s)}});
+  let V=esmShuffle(st.filter(x=>x.v)),F=esmShuffle(st.filter(x=>!x.v));
+  const take=(arr,all,n,not)=>{const r=[];while(r.length<n){if(!arr.length)arr.push(...esmShuffle(all.filter(x=>!r.includes(x)&&!not.includes(x))));r.push(arr.shift())}return r};
+  const Vall=st.filter(x=>x.v),Fall=st.filter(x=>!x.v),qs=[];
+  [true,false,true].forEach(want=>{
+    const one=want?take(V,Vall,1,[]):take(F,Fall,1,[]),two=want?take(F,Fall,2,[]):take(V,Vall,2,[]);
+    const opts=esmShuffle([{...one[0],ok:true},...two.map(x=>({...x,ok:false}))]);
+    qs.push({src:(want?"¿Qué es verdad según el texto?":"¿Qué NO es verdad según el texto?")+" ["+opts.map(o=>(o.ok?"*":"")+o.s.replace(/[;\]\[]/g,",")).join(";")+"]"});
+  });
+  acts.push({t:"Actividad 5",pts:.75,sk:"Lee el texto y elige la opción correcta (a, b o c)",skk:"Prečítaj text a vyber správnu možnosť.",ctx:tx.context,items:qs,abc:true});
+  // 6 · môj deň: päť hodín, päť rôznych slovies
+  const hrs=pick([7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22],5).sort((a,b)=>a-b);
+  acts.push({t:"Actividad 6",pts:1,sk:"Escribe tu rutina para las siguientes horas. Usa 5 verbos diferentes en presente",skk:"Napíš, čo robíš v daných hodinách. Použi 5 rôznych slovies v prítomnom čase (tvar yo).",
+    ex:"06:00 ⟨Me despierto⟩",rutina:hrs.map(h=>String(h).padStart(2,"0")+":00")});
+  return acts;
+}
+function esxExam(body){
+  esmStop();body.innerHTML="";
+  const hist=esmGet(ESM_K.exams,[]);
+  body.append(esmEl("div",{class:"m-card"},
+    esmEl("p",{class:"m-hint"},"Test má rovnakú stavbu ako vzorová skúška Examen parcial (Modelo 0): 6 aktivít, spolu 4 body. Čísla, zámená, slovesá, vety aj text sa zakaždým vyberú náhodne z cvičení v zošite, takže každý test je iný."),
+    esmEl("ul",{class:"m-plan"},...[["1","Čísla slovom","5 × 0,1 b"],["2","Privlastňovacie zámená","5 × 0,1 b"],["3","Sloveso z tabuľky v prítomnom čase","5 × 0,15 b"],["4","ir a + neurčitok","5 × 0,15 b"],["5","Text a otázky a / b / c","3 × 0,25 b"],["6","Môj deň: 5 rôznych slovies","5 × 0,2 b"]]
+      .map(([n,a,b])=>esmEl("li",{},esmEl("b",{},"Actividad "+n),esmEl("span",{},a),esmEl("span",{class:"m-pct"},b)))),
+    esmEl("p",{class:"m-hint"},"Chýbajúca diakritika sa počíta za polovicu. Časomiera beží, kým test neodovzdáš."),
+    esmEl("div",{class:"m-foot"},esmBtn("Nový test",()=>esxRun(body)))));
+  if(hist.length){
+    const ul=esmEl("ul",{class:"m-hist"});
+    hist.slice(0,8).forEach(h=>{const pct=Math.round(h.p/4*100);ul.append(esmEl("li",{},
+      esmEl("span",{},new Date(h.d).toLocaleDateString("sk-SK")),esmEl("b",{class:esmScoreClass(pct)},esmPts(h.p)+" / 4"),esmEl("span",{},pct+" %"),esmEl("span",{},esmFmt(h.s))))});
+    body.append(esmEl("div",{class:"m-card"},esmEl("p",{class:"m-label"},"Posledné testy"),ul));
+  }
+}
+function esxRun(body){
+  esmStop();body.innerHTML="";esmTop(body);
+  const acts=esxBuild(),t0=Date.now(),parts=[],model=1+Math.floor(Math.random()*99);
+  const clock=esmEl("span",{class:"m-clock"},"0:00");
+  esmTimer=setInterval(()=>{if(!clock.isConnected){esmStop();return}clock.textContent=esmFmt((Date.now()-t0)/1000)},1000);
+  const sheet=esmEl("div",{class:"m-card m-exam"},
+    esmEl("div",{class:"m-bar"},esmEl("span",{class:"m-meta"},"Examen parcial · Modelo "+model),clock),
+    esmEl("p",{class:"m-ex-h"},"Español para la economía · nivel A1"));
+  acts.forEach(a=>{
+    const sec=esmEl("section",{class:"m-act"});
+    const got=esmEl("span",{class:"m-pts"},"("+esmPts(a.pts)+")");
+    sec.append(esmEl("h3",{},a.t+" ",got,esmEl("span",{class:"m-act-t"}," "+a.sk)),esmEl("p",{class:"m-ins"},a.skk));
+    if(a.bank)sec.append(esmEl("div",{class:"m-bank"},...a.bank.map(v=>esmEl("span",{},v))));
+    if(a.ctx){const c=esmEl("div",{class:"m-text",html:a.ctx});sec.append(c)}
+    if(a.ex)sec.append(esxExample(a.ex));
+    const ol=esmEl("ol",{class:"m-items"+(a.abc?" m-num":" m-abcl")}),per=a.pts/(a.items?a.items.length:a.rutina.length),its=[];
+    if(a.items)a.items.forEach(it=>{const r=esxLine(it.src);ol.append(esmEl("li",{},r.line));its.push({...it,blanks:r.blanks})});
+    else a.rutina.forEach(h=>{
+      const inp=esmEl("input",{class:"m-blank m-input",style:"width:min(100%,34ch)",type:"text",autocomplete:"off",autocapitalize:"off",spellcheck:"false","aria-label":"Čo robíš o "+h});
+      const fb=esmEl("span",{class:"m-fb"});inp.oninput=()=>{inp.classList.remove("ok","warn","bad");fb.textContent="";fb.className="m-fb"};
+      ol.append(esmEl("li",{},esmEl("div",{class:"m-line m-rut"},esmEl("b",{},h+" "),inp,fb)));its.push({inp,fb});
+    });
+    sec.append(ol);sheet.append(sec);
+    parts.push({a,its,per,got});
+  });
+  const inputs=[...sheet.querySelectorAll("input")];
+  inputs.forEach((inp,k)=>inp.addEventListener("keydown",e=>{if(e.key==="Enter"&&inputs[k+1]){e.preventDefault();inputs[k+1].focus()}}));
+  const score=esmEl("span",{class:"m-score","aria-live":"polite"});
+  const again=esmBtn("Nový test",()=>esxRun(body));again.hidden=true;
+  const back=esmBtn("Späť",()=>esxExam(body),"ghost");back.hidden=true;
+  const submit=esmBtn("Odovzdať test",()=>{
+    esmStop();const sec=Math.round((Date.now()-t0)/1000);let tot=0;const rec={};
+    parts.forEach(p=>{
+      let got=0;
+      if(p.a.rutina){
+        const yo=esxYoForms(),seen=new Set();
+        p.its.forEach(({inp,fb})=>{
+          const z=" "+esmBare(inp.value)+" ";let hit=null;
+          [...yo.keys()].sort((x,y)=>y.length-x.length).some(f=>{if(z.includes(" "+f+" ")){hit=yo.get(f);return true}return false});
+          inp.classList.remove("ok","warn","bad");
+          if(!esmNorm(inp.value)){inp.classList.add("bad");fb.className="m-fb bad";fb.textContent="→\u00a0napr. Me levanto";return}
+          if(!hit){inp.classList.add("warn");fb.className="m-fb warn";fb.textContent="Nenašiel som sloveso v tvare yo (me levanto, como…). Skontroluj sám.";return}
+          const base=hit.replace(/se$/,"");
+          if(seen.has(base)){inp.classList.add("warn");fb.className="m-fb warn";fb.textContent="Sloveso "+hit+" už máš, použi iné.";return}
+          seen.add(base);got+=p.per;inp.classList.add("ok");fb.className="m-fb ok";fb.textContent="✓ "+hit;
+        });
+      }else p.its.forEach(it=>{
+        let r=0;it.blanks.forEach(b=>r+=esmMarkBlank(b));r/=it.blanks.length;got+=r*p.per;
+        if(it.ref)(rec[it.ref.tid+"|"+it.ref.ei]=rec[it.ref.tid+"|"+it.ref.ei]||[]).push([it.ref.ii,r>=.5]);
+      });
+      got=Math.round(got*100)/100;tot+=got;p.got.textContent="("+esmPts(got)+" / "+esmPts(p.a.pts)+")";p.got.className="m-pts "+esmScoreClass(got/p.a.pts*100);
+    });
+    Object.entries(rec).forEach(([k,v])=>{const [tid,ei]=k.split("|");esRecord(tid,+ei,v)});
+    tot=Math.round(tot*100)/100;const pct=Math.round(tot/4*100);
+    submit.hidden=true;again.hidden=false;back.hidden=false;clock.textContent=esmFmt(sec);
+    score.textContent="Puntuación: "+esmPts(tot)+" / 4 · "+pct+" % · "+esmFmt(sec);score.className="m-score "+esmScoreClass(pct);
+    const h=esmGet(ESM_K.exams,[]);h.unshift({d:Date.now(),p:tot,s:sec});esmSet(ESM_K.exams,h.slice(0,20));
+  });
+  sheet.append(esmEl("div",{class:"m-foot"},submit,again,back,score));
+  body.append(sheet);
 }
 
 /* ---------- 4. časovanie slovies ---------- */

@@ -315,6 +315,11 @@ select.m-blank{border:1px solid var(--es-line);border-bottom:2px solid var(--mut
 .m-fb.ok{color:var(--es-ok)}.m-fb.warn{color:var(--es-warn)}.m-fb.bad{color:var(--es-bad)}
 .m-fb.big{font-size:17px;margin:0;min-height:1.5em}
 /* Skúška nanečisto */
+.m-cheat h3{margin:0;font:700 18px/1.3 var(--es-body)}
+.m-cheat p,.m-cheat ul,.m-cheat ol{margin:6px 0}
+.m-cheat li{margin:3px 0}
+.m-cheat .es-tbl td{white-space:normal}
+@media print{.m-noprint,.m-link,#esKeys,.top,header,footer,nav{display:none!important}.m-cheat{break-inside:avoid;box-shadow:none!important}}
 .m-plan{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .m-plan li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:baseline;font-size:15px}
 .m-exam{gap:22px}
@@ -1904,6 +1909,7 @@ const ESM_MODES={
   chyby:{t:"Moje chyby",sk:"Vety, v ktorých si urobil chybu. Keď ich vyriešiš správne, zo zoznamu zmiznú."},
   karticky:{t:"Kartičky so slovíčkami",sk:"Slovíčka z hodín. Spomeň si, otoč kartičku a označ, či si vedel."},
   skuska:{t:"Skúška nanečisto",sk:"Náhodný test vo formáte vzorovej skúšky Examen parcial: 6 aktivít, 4 body."},
+  tahak:{t:"Ťahák k skúške",sk:"Všetky pravidlá k 6 aktivitám skúšky na jednom mieste: čísla, zámená, prítomný čas, ir a, čítanie, môj deň."},
   test:{t:"Test naprieč témami",sk:"Náhodné úlohy zo všetkých tém, s časomierou a skóre."},
   casovanie:{t:"Časovanie slovies",sk:"Rýchlo napíš správny tvar slovesa pre danú osobu."}
 };
@@ -2036,11 +2042,12 @@ function esmRender(box,mode,back){
   head.append(esmEl("h2",{},ESM_MODES[mode].t),esmEl("p",{class:"m-sub"},ESM_MODES[mode].sk));
   const body=esmEl("div",{class:"m-body"});
   box.append(head,body);
-  ({chyby:esmMistakes,karticky:esmCards,test:esmExam,casovanie:esmConj,skuska:esxExam})[mode](body);
+  ({chyby:esmMistakes,karticky:esmCards,test:esmExam,casovanie:esmConj,skuska:esxExam,tahak:esxCheat})[mode](body);
 }
 function esmModeCount(mode){
   if(mode==="chyby"){const n=esMissList().length;return n?n+" na zopakovanie":"zatiaľ žiadne"}
   if(mode==="karticky"){const st=esmGet(ESM_K.cards,{}),tot=Object.values(ES_CARDS).reduce((s,d)=>s+d.c.length,0);return Object.values(st).filter(v=>v===1).length+" / "+tot}
+  if(mode==="tahak")return "6 aktivít";
   if(mode==="skuska"){const h=esmGet(ESM_K.exams,[]);return h.length?"naposledy "+esmPts(h[0].p)+" / 4":"6 aktivít"}
   if(mode==="test"){const h=esmGet(ESM_K.tests,[]);return h.length?"naposledy "+Math.round(h[0].p/h[0].t*100)+" %":"20 úloh"}
   const h=esmGet(ESM_K.conj,[]);return h.length?"naposledy "+esmPts(h[0].ok)+" / "+h[0].n:ESC_V.length+" slovies";
@@ -2264,7 +2271,7 @@ function esxExam(body){
     esmEl("ul",{class:"m-plan"},...[["1","Čísla slovom","5 × 0,1 b"],["2","Privlastňovacie zámená","5 × 0,1 b"],["3","Sloveso z tabuľky v prítomnom čase","5 × 0,15 b"],["4","ir a + neurčitok","5 × 0,15 b"],["5","Text a otázky a / b / c","3 × 0,25 b"],["6","Môj deň: 5 rôznych slovies","5 × 0,2 b"]]
       .map(([n,a,b])=>esmEl("li",{},esmEl("b",{},"Actividad "+n),esmEl("span",{},a),esmEl("span",{class:"m-pct"},b)))),
     esmEl("p",{class:"m-hint"},"Chýbajúca diakritika sa počíta za polovicu. Časomiera beží, kým test neodovzdáš."),
-    esmEl("div",{class:"m-foot"},esmBtn("Nový test",()=>esxRun(body)))));
+    esmEl("div",{class:"m-foot"},esmBtn("Nový test",()=>esxRun(body)),esmBtn("Ťahák",()=>esOpen("tahak"),"ghost"))));
   if(hist.length){
     const ul=esmEl("ul",{class:"m-hist"});
     hist.slice(0,8).forEach(h=>{const pct=Math.round(h.p/4*100);ul.append(esmEl("li",{},
@@ -2332,6 +2339,79 @@ function esxRun(body){
   });
   sheet.append(esmEl("div",{class:"m-foot"},submit,again,back,score));
   body.append(sheet);
+}
+
+/* ---------- 6. ťahák k skúške: pravidlá ku všetkým 6 aktivitám ---------- */
+const ESX_CHEAT=[
+["1 · Čísla · Los números",`<div class="es-tbl"><table>
+<tr><th>Čísla</th><th>Pravidlo</th><th>Príklad</th></tr>
+<tr><td>0–15</td><td>naspamäť</td><td>cero, uno, dos … once, doce, trece, catorce, quince</td></tr>
+<tr><td>16–19</td><td>jedno slovo, dieci-</td><td>dieciséis, diecisiete, dieciocho, diecinueve</td></tr>
+<tr><td>20–29</td><td>jedno slovo, veinti-</td><td>veinte, veintiuno, veintidós, veintitrés, veintiséis</td></tr>
+<tr><td>desiatky</td><td>naspamäť</td><td>treinta, cuarenta, cincuenta, sesenta, setenta, ochenta, noventa</td></tr>
+<tr><td>31–99</td><td>tri slová s <b>y</b></td><td>47 cuarenta y siete · 93 noventa y tres</td></tr>
+<tr><td>100</td><td>samotné cien, inak ciento</td><td>100 cien · 101 ciento uno · 147 ciento cuarenta y siete</td></tr>
+<tr><td>stovky</td><td>pozor na nepravidelné</td><td>doscientos, trescientos, cuatrocientos, <b>quinientos</b>, seiscientos, <b>setecientos</b>, ochocientos, <b>novecientos</b></td></tr>
+<tr><td>1000 +</td><td>mil (nikdy „un mil“)</td><td>1998 mil novecientos noventa y ocho · 10 003 diez mil tres</td></tr>
+<tr><td>milión</td><td>un millón, dos millones</td><td>1 000 000 000 mil millones</td></tr></table></div>
+<ul><li><b>y</b> je iba medzi desiatkami a jednotkami: ciento cuarenta <b>y</b> siete, nikdy „ciento y cuarenta“.</li>
+<li>Pred ženským rodom 200–900 končia na -as: doscient<b>as</b> personas. Pred podstatným menom: veinti<b>ún</b> libros, treinta y <b>una</b> libretas.</li></ul>`],
+["2 · Privlastňovacie zámená · Los posesivos",`<p>Vyber slovo podľa vlastníka, potom ho prispôsob <b>veci</b>, ktorú vlastní.</p>
+<div class="es-tbl"><table><tr><th>Vlastník</th><th>1 vec</th><th>viac vecí</th><th>po ser</th></tr>
+<tr><td>yo</td><td>mi</td><td>mis</td><td>mío, mía</td></tr>
+<tr><td>tú</td><td>tu</td><td>tus</td><td>tuyo, tuya</td></tr>
+<tr><td>él, ella, usted</td><td>su</td><td>sus</td><td>suyo, suya</td></tr>
+<tr><td>nosotros/as</td><td>nuestro / nuestra</td><td>nuestros / nuestras</td><td>nuestro, nuestra</td></tr>
+<tr><td>vosotros/as</td><td>vuestro / vuestra</td><td>vuestros / vuestras</td><td>vuestro, vuestra</td></tr>
+<tr><td>ellos/as, ustedes</td><td>su</td><td>sus</td><td>suyo, suya</td></tr></table></div>
+<ul><li>(nosotros) <b>nuestra</b> casa, lebo casa je ženského rodu · (tú) <b>tus</b> hermanos, lebo je ich viac.</li>
+<li>Po ser dlhý tvar, v rode aj čísle: el coche es <b>mío</b> · los móviles son <b>suyos</b> (+ -s pri viacerých veciach).</li></ul>`],
+["3 · Prítomný čas · El presente",`<p>Odober -ar, -er, -ir a pridaj koncovku podľa osoby.</p>
+<div class="es-tbl"><table><tr><th></th><th>hablar</th><th>comer</th><th>vivir</th><th>levantarse</th></tr>
+<tr><td>yo</td><td>habl<b>o</b></td><td>com<b>o</b></td><td>viv<b>o</b></td><td><b>me</b> levanto</td></tr>
+<tr><td>tú</td><td>habl<b>as</b></td><td>com<b>es</b></td><td>viv<b>es</b></td><td><b>te</b> levantas</td></tr>
+<tr><td>él, ella, usted</td><td>habl<b>a</b></td><td>com<b>e</b></td><td>viv<b>e</b></td><td><b>se</b> levanta</td></tr>
+<tr><td>nosotros</td><td>habl<b>amos</b></td><td>com<b>emos</b></td><td>viv<b>imos</b></td><td><b>nos</b> levantamos</td></tr>
+<tr><td>vosotros</td><td>habl<b>áis</b></td><td>com<b>éis</b></td><td>viv<b>ís</b></td><td><b>os</b> levantáis</td></tr>
+<tr><td>ellos, ustedes</td><td>habl<b>an</b></td><td>com<b>en</b></td><td>viv<b>en</b></td><td><b>se</b> levantan</td></tr></table></div>
+<p><b>Slovesá bota</b> menia kmeň vo všetkých osobách okrem nosotros a vosotros:</p>
+<div class="es-tbl"><table><tr><th>Zmena</th><th>Slovesá</th><th>yo / nosotros</th></tr>
+<tr><td>e → ie</td><td>querer, pensar, empezar, cerrar, preferir, despertarse</td><td>quiero / queremos</td></tr>
+<tr><td>e → i</td><td>pedir, repetir, seguir, vestirse</td><td>pido / pedimos · me visto</td></tr>
+<tr><td>o → ue</td><td>poder, volver, dormir, almorzar, acostarse</td><td>puedo / podemos · almuerzo</td></tr>
+<tr><td>u → ue</td><td>jugar</td><td>juego / jugamos</td></tr></table></div>
+<p><b>Nepravidelné:</b> ser (soy, eres, es, somos, sois, son) · estar (estoy, estás, está…) · tener (tengo, tienes…) · salir (salgo) · hacer (hago) · ir (voy, vas, va, vamos, vais, van).</p>
+<p><b>Postup pri slovese z tabuľky:</b> 1. vyber sloveso, ktoré dáva zmysel · 2. nájdi, kto to robí · 3. napíš tvar pre túto osobu, pri -se aj so zámenom: Marta <b>se peina</b>.</p>`],
+["4 · ir a + neurčitok",`<p>Vyjadruje, čo <b>niekto urobí / ide urobiť</b>. Vzorec: <b>ir v prítomnom čase + a + neurčitok bez zmeny</b>.</p>
+<div class="es-tbl"><table><tr><th></th><th>ir</th><th>Príklad</th></tr>
+<tr><td>yo</td><td>voy</td><td>Yo <b>voy a hablar</b> con el jefe.</td></tr>
+<tr><td>tú</td><td>vas</td><td>¿<b>Vas a imprimir</b> los documentos?</td></tr>
+<tr><td>él, ella, usted</td><td>va</td><td>La secretaria <b>va a escribir</b> un correo.</td></tr>
+<tr><td>nosotros</td><td>vamos</td><td>Nosotros <b>vamos a comer</b> a las 14:00.</td></tr>
+<tr><td>vosotros</td><td>vais</td><td>Vosotros <b>vais a apagar</b> los ordenadores.</td></tr>
+<tr><td>ellos, ustedes</td><td>van</td><td>Los empleados <b>van a tener</b> una reunión.</td></tr></table></div>
+<ul><li>Neurčitok sa nemení: va a escrib<b>ir</b>, nie „va a escribe“. Nezabudni na <b>a</b>.</li>
+<li>Pri slovese so -se: voy a levantar<b>me</b> = <b>me</b> voy a levantar.</li></ul>`],
+["5 · Text a otázky a, b, c",`<ol><li>Najprv si prečítaj otázky, aby si vedel, čo hľadáš.</li>
+<li>Pri čítaní si všímaj časy, miesta a osoby.</li>
+<li>Každú možnosť over v konkrétnej vete textu. Nesprávne možnosti často berú skutočný detail z textu, ale zamenia čas, miesto alebo osobu.</li>
+<li>¿Qué es verdad? = vyber <b>pravdivú</b>. ¿Qué NO es verdad? = vyber <b>nepravdivú</b>.</li></ol>
+<p><b>Opytovacie slová:</b> ¿a qué hora? o koľkej · ¿dónde? kde · ¿con quién? s kým · ¿qué hace? čo robí · ¿cuándo? kedy · ¿por qué? prečo</p>
+<p><b>Čas:</b> a las seis o šiestej · y cuarto a štvrť · y media a pol · menos cuarto trištvrte na · de la mañana / tarde / noche</p>`],
+["6 · Môj deň · Mi rutina",`<p>Ku každej hodine jedna krátka veta v tvare <b>yo</b> a zakaždým <b>iné sloveso</b>.</p>
+<div class="es-tbl"><table><tr><th>Čas</th><th>Vzorová veta</th></tr>
+<tr><td>06:00</td><td>Me despierto.</td></tr><tr><td>07:00</td><td>Me levanto y me ducho.</td></tr>
+<tr><td>08:00</td><td>Desayuno y salgo de casa.</td></tr><tr><td>09:00</td><td>Voy a la universidad en autobús.</td></tr>
+<tr><td>14:00</td><td>Almuerzo en la universidad.</td></tr><tr><td>15:00</td><td>Estudio español en clase.</td></tr>
+<tr><td>16:00</td><td>Vuelvo a casa.</td></tr><tr><td>17:00</td><td>Voy al gimnasio.</td></tr>
+<tr><td>18:00</td><td>Hago los deberes.</td></tr><tr><td>20:30</td><td>Ceno con mi familia.</td></tr>
+<tr><td>22:00</td><td>Leo un libro.</td></tr><tr><td>23:00</td><td>Me acuesto y me duermo.</td></tr></table></div>
+<p><b>Užitočné tvary:</b> me despierto, me levanto, me ducho, me visto, me peino, desayuno, salgo, voy, trabajo, estudio, almuerzo, vuelvo, ceno, leo, veo la tele, hago deporte, me acuesto, me duermo.</p>`]
+];
+function esxCheat(body){
+  esmStop();body.innerHTML="";
+  body.append(esmEl("div",{class:"m-foot m-noprint"},esmBtn("Precvičiť test",()=>esOpen("skuska")),esmBtn("Vytlačiť",()=>window.print(),"ghost")));
+  ESX_CHEAT.forEach(([h,html])=>body.append(esmEl("div",{class:"m-card m-cheat"},esmEl("h3",{},h),esmEl("div",{html}))));
 }
 
 /* ---------- 4. časovanie slovies ---------- */
